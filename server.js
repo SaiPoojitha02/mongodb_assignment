@@ -1,38 +1,66 @@
-// Budget API
-
-const fs = require('fs');
-const express = require('express');
-const cors = require('cors');
+const mongoose = require("mongoose");
+const budgetModel = require("./moduledb/budgetdb");
+const bodyParser = require("body-parser");
+const express = require("express");
+const cors = require("cors");
 const app = express();
 const port = 3030;
 
-app.use(cors());
-
-const budget = {
-    myBudget: [
-        {
-            title: 'Eat out',
-            budget: 25
-        },
-        {
-            title: 'Rent',
-            budget: 25
-        },
-        {
-            title: 'Grocery',
-            budget: 50
-        },
-    ]
+const corsOptions = {
+  origin: "http://localhost:3030",
 };
+app.use(cors(corsOptions));
 
+app.use(bodyParser.json());
+app.use("/", express.static("public"));
 
-const json = fs.readFileSync('Categories.json', 'utf8');
-const Data = JSON.parse(json);
-app.get('/budget', (req, res) => {
-    res.json(Data);
+app.get("/collection", (req, res) => {
+  mongoose.connect("mongodb://127.0.0.1:27017/mybudget", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Connected to the Database");
+    budgetModel.find({})
+      .then((data) => {
+        res.json(data);
+        console.log(data);
+        mongoose.connection.close();
+      })
+      .catch((connectionError) => {
+        console.error(connectionError);
+      });
+  })
+  .catch((err) => {
+    console.error(err);
+  });
 });
 
+app.post("/collection", (req, res) => {
+  mongoose.connect("mongodb://127.0.0.1:27017/mybudget", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Connected to the database");
+    const newItem = new budgetModel(req.body);
+    budgetModel.create(newItem) 
+      .then((data) => {
+        res.json(data);
+        console.log(data);
+        mongoose.connection.close();
+      })
+      .catch((connectionError) => {
+        console.error(connectionError);
+        res.status(400).json({error:'Internal Server error-Validation failed'})
+      });
+  })
+  .catch((err) => {
+    console.error(err);
+    res.status(400).json({error:'Internal Server error'})
+  });
+});
 
 app.listen(port, () => {
-    console.log(`API served at http://localhost:${port}`);
+  console.log(`API served at http://localhost:${port}`);
 });
